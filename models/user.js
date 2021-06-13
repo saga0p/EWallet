@@ -14,7 +14,11 @@ const userSchema = new mongoose.Schema({
         default: 0
     },
     credits: {type: Number,
-    default: 0}
+    default: 0},
+    referralcode: {
+        type: String,
+        default: null
+    }
 })
 
 module.exports = mongoose.model('User', userSchema);

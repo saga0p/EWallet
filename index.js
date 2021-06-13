@@ -5,8 +5,10 @@ const User = require('/Users/sgawa/EWallet/models/user');
 const bcrypt = require('bcrypt');
 const session =  require('express-session');
 const Transactions = require('/Users/sgawa/EWallet/models/transactions');
+var shortid = require('shortid');
 
 const mongoose = require('mongoose');
+const { findOne } = require('/Users/sgawa/EWallet/models/user');
 mongoose.connect('mongodb://localhost:27017/walletApp', {useNewUrlParser: true, useUnifiedTopology: true})
 .then(() => {
     console.log("CONNECTION OPEN!!!")
@@ -17,7 +19,7 @@ mongoose.connect('mongodb://localhost:27017/walletApp', {useNewUrlParser: true, 
 })
 
 app.use(require("express-session")({
-    secret: "ZubeeGoSemesterProject",
+    secret: "EwalletProject",
     cookie: { 
         httpOnly: true,
         expires : Date.now() + 3600000*24*7,
@@ -47,16 +49,29 @@ app.get('/register', (req, res) => {
     res.render('register');
 })
 app.post('/register', async (req, res) => {
-    const {password, username} = req.body;
+    const {password, username, referralcode} = req.body;
     const hashpw = await bcrypt.hash(password, 12);
+    let referral_code = shortid.generate();
+    let checkUser = await User.findOne({referralcode});
     const user = new User({
         username,
-        password: hashpw
+        password: hashpw,
+        referralcode: referral_code
     })
+
+    if (checkUser) {
+       if (checkUser.referralcode == referralcode){
+            user.coins += 50;
+            let intCoins = parseInt(checkUser.coins);
+            checkUser.coins = intCoins + 100;
+            await checkUser.save();
+            console.log(checkUser);
+        }
+    }
     await user.save();
     req.session.user_id = user._id;
 
-    res.redirect('/home')
+    res.render('home', { user })
 })
 
 app.get('/login', (req, res) => {
@@ -68,7 +83,7 @@ app.post('/login', async (req,res) => {
     const validPw = await bcrypt.compare(password, user.password);
     if (validPw) {
         req.session.user_id = user._id;
-        res.redirect('/home')
+        res.render('home', { user })
     } else {
         res.send("TRY AGAIN")
     }
